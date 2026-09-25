@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-HollowIA - Chatbot Avançado com Aprendizado, Histórico e Criatividade Focada no Assunto.
-
-Recursos:
-- Aprendizado ativo pelo usuário com opção de delegar pesquisa para a IA.
-- Separação da memória entre aprendizados do usuário e dados obtidos via Web.
-- Armazenamento automático e silencioso de pesquisas e sinônimos na memória Web.
-- Mapeamento de sinônimos/termos equivalentes (ex: GPU/Placa de vídeo, ETS2/Euro Truck Simulator 2).
-- Detecção precisa de afirmações/negações, personalidades e correspondência de assunto via Regex com palavras exatas.
+HollowIA - Chatbot Avançado com Aprendizado, Histórico e Personalidade Ultra Expressiva! 🚀✨🎉
 """
 
 import json
@@ -21,31 +14,28 @@ from typing import Any, Dict, List, Optional
 import urllib.request
 import urllib.parse
 
-# Tente importar a biblioteca de Text-to-Speech
 try:
     import pyttsx3
 except ImportError:
     pyttsx3 = None
 
-# --- Constantes de Arquivos ---
 MEMORIA_FILE = "memoria.json"
 HISTORICO_FILE = "historico.json"
-CHANCE_REFLEXAO_INEDITA = 0.40  # 40% de chance de gerar uma reflexão inédita sobre o assunto
-CHANCE_PESQUISA_AUTOMATICA = 0.65  # 65% de chance de pesquisar automaticamente
+CHANCE_REFLEXAO_INEDITA = 0.30
+CHANCE_PESQUISA_AUTOMATICA = 0.65
 
-# --- Mapeamento de Sinônimos / Termos Equivalentes ---
 SINONIMOS = {
     "gpu": ["placa de vídeo", "placa de video", "gpu"],
     "placa de vídeo": ["gpu", "placa de vídeo", "placa de video"],
     "placa de video": ["gpu", "placa de vídeo", "placa de video"],
     "ets2": ["euro truck simulator 2", "ets2", "euro truck"],
     "euro truck simulator 2": ["ets2", "euro truck simulator 2", "euro truck"],
-    "euro truck": ["ets2", "euro truck simulator 2", "euro truck"]
+    "euro truck": ["ets2", "euro truck simulator 2", "euro truck"],
+    "triste": ["triste", "chateado", "mal", "deprimido", "tristeza"],
+    "chateado": ["triste", "chateado", "mal", "deprimido"]
 }
 
-# ------------------ Voz ------------------
 engine = None
-
 if pyttsx3:
     try:
         engine = pyttsx3.init()
@@ -60,7 +50,6 @@ def falar(texto: str) -> None:
         except Exception:
             pass
 
-# ------------------ Verificação de Conexão ------------------
 def tem_conexao_internet() -> bool:
     try:
         socket.create_connection(("8.8.8.8", 53), timeout=3)
@@ -68,7 +57,6 @@ def tem_conexao_internet() -> bool:
     except OSError:
         return False
 
-# ------------------ Formatação e Resumo de Texto ------------------
 def formatar_em_paragrafos(texto: str, frases_por_paragrafo: int = 2) -> str:
     if not texto:
         return ""
@@ -79,14 +67,36 @@ def formatar_em_paragrafos(texto: str, frases_por_paragrafo: int = 2) -> str:
         paragrafos.append(paragrafo)
     return "\n\n".join(paragrafos)
 
-def resumir_texto(texto: str, max_frases: int = 2) -> str:
-    """Extrai apenas as primeiras frases de um texto longo para respostas curtas."""
+def resumir_texto(texto: str, max_frases: int = 1) -> str:
     if not texto:
         return ""
-    frases = [f.strip() for f in re.split(r'(?<=[.!?])\s+', texto.strip()) if f.strip()]
+    frases = [f.strip() for f in re.split(r'(?<=[.!?])\s+', texto.strip()) if len(f.strip()) > 5]
     return " ".join(frases[:max_frases])
 
-# ------------------ Histórico Temporal ------------------
+def extrair_palavra_chave(texto: str) -> str:
+    stop_words = {"eu", "estou", "me", "sinto", "muito", "o", "a", "os", "as", "de", "do", "da", "em", "um", "uma", "para", "com", "que"}
+    palavras = re.findall(r'\b\w+\b', texto.lower())
+    filtradas = [p for p in palavras if p not in stop_words]
+    return filtradas[0] if filtradas else texto.lower().strip()
+
+def gerar_sintese_coerente(assunto: str, texto_memoria: str) -> str:
+    frases = [f.strip() for f in re.split(r'(?<=[.!?])\s+', texto_memoria.strip()) if len(f.strip()) > 15]
+    termos_irrelevantes = ["vocabulário", "extenso", "especializado", "termo", "etimologia", "palavra", "refere-se a"]
+    
+    frases_uteis = [
+        f for f in frases 
+        if not any(t in f.lower() for t in termos_irrelevantes)
+    ]
+    
+    frase_escolhida = frases_uteis[0] if frases_uteis else (frases[0] if frases else f"{assunto} é um tema bastante interessante.")
+    
+    introducoes = [
+        f"Sobre {assunto}: {frase_escolhida}",
+        f"Lembro que {frase_escolhida.lower() if frase_escolhida[0].isupper() else frase_escolhida}",
+        f"Em resumo: {frase_escolhida}"
+    ]
+    return random.choice(introducoes)
+
 def salvar_historico(usuario: str, ia: str, assunto: Optional[str] = None) -> None:
     agora = datetime.now()
     dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
@@ -112,7 +122,6 @@ def salvar_historico(usuario: str, ia: str, assunto: Optional[str] = None) -> No
             historico = []
             
     historico.append(registro)
-    
     try:
         with open(HISTORICO_FILE, "w", encoding="utf-8") as f:
             json.dump(historico, f, indent=4, ensure_ascii=False)
@@ -132,7 +141,6 @@ def obter_ultimo_assunto_historico() -> Optional[str]:
             return None
     return None
 
-# ------------------ Memória e Aprendizado (Separada por Usuário e Web) ------------------
 def carregar_memoria() -> Dict[str, List[Dict[str, Any]]]:
     memoria_padrao = {"usuario": [], "web": []}
     if os.path.exists(MEMORIA_FILE):
@@ -157,65 +165,47 @@ def salvar_memoria(memoria: Dict[str, List[Dict[str, Any]]]) -> None:
     except IOError:
         pass
 
-def ensinar(
-    memoria: Dict[str, List[Dict[str, Any]]],
-    assunto: str,
-    resposta: str,
-    pergunta_followup: Optional[str] = None,
-    fonte: str = "usuario"
-) -> None:
-    assunto_lower = assunto.lower().strip()
-    
-    memoria[fonte] = [
-        item for item in memoria.get(fonte, [])
-        if item.get("assunto", "").lower().strip() != assunto_lower
-    ]
-    
-    sinonimos_associados = SINONIMOS.get(assunto_lower, [assunto_lower])
+def ensinar(memoria: Dict[str, List[Dict[str, Any]]], assunto: str, resposta: str, pergunta_followup: Optional[str] = None, fonte: str = "usuario") -> None:
+    assunto_limpo = extrair_palavra_chave(assunto)
+    memoria[fonte] = [item for item in memoria.get(fonte, []) if item.get("assunto", "").lower().strip() != assunto_limpo]
+    sinonimos_associados = SINONIMOS.get(assunto_limpo, [assunto_limpo, assunto.lower().strip()])
 
     novo_conhecimento = {
-        "assunto": assunto,
+        "assunto": assunto_limpo,
+        "frase_original": assunto,
         "resposta": resposta,
         "pergunta_followup": pergunta_followup,
         "sinonimos": sinonimos_associados
     }
-    
     memoria[fonte].append(novo_conhecimento)
     salvar_memoria(memoria)
 
 def combiner_resposta(memoria: Dict, entrada: str) -> Optional[Dict[str, Any]]:
-    """Verifica correspondência na memória (priorizando Usuário depois Web) usando Regex exato para palavra inteira."""
     entrada_lower = entrada.lower().strip()
-
     for fonte in ["usuario", "web"]:
         for item in memoria.get(fonte, []):
             assunto = item.get("assunto", "").lower().strip()
             if not assunto:
                 continue
-                
-            # 1. Verificação via Regex de Palavra Exata (\b)
             if re.search(rf"\b{re.escape(assunto)}\b", entrada_lower):
                 return item
-
-            # 2. Verificação via Sinônimos com Regex de Palavra Exata (\b)
+            frase_orig = item.get("frase_original", "").lower().strip()
+            if frase_orig and frase_orig in entrada_lower:
+                return item
             termos_equivalentes = item.get("sinonimos", SINONIMOS.get(assunto, []))
             for eq in termos_equivalentes:
                 if re.search(rf"\b{re.escape(eq.lower())}\b", entrada_lower):
                     return item
-
     return None
 
-# ------------------ Módulo de Pesquisa Direta ------------------
 def pesquisar_na_internet(termo: str, resumido: bool = False, memoria: Optional[Dict] = None) -> str:
     if not tem_conexao_internet():
         return "Você está sem internet!"
 
     termo_limpo = termo.strip()
     headers = {'User-Agent': 'HollowIA/1.0 (Educational Chatbot)'}
-    
     texto_bruto = ""
 
-    # 1. Wikipédia
     url_wiki = f"https://pt.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(termo_limpo)}"
     try:
         req = urllib.request.Request(url_wiki, headers=headers)
@@ -226,7 +216,6 @@ def pesquisar_na_internet(termo: str, resumido: bool = False, memoria: Optional[
     except Exception:
         pass
 
-    # 2. DuckDuckGo (caso Wikipédia falhe)
     if not texto_bruto:
         url_ddg = f"https://api.duckduckgo.com/?q={urllib.parse.quote(termo_limpo)}&format=json&no_html=1&kl=br-pt"
         try:
@@ -244,34 +233,16 @@ def pesquisar_na_internet(termo: str, resumido: bool = False, memoria: Optional[
             pass
 
     if texto_bruto:
-        resposta_final = resumir_texto(texto_bruto, max_frases=2) if resumido else formatar_em_paragrafos(texto_bruto)
-        
+        resposta_final = resumir_texto(texto_bruto, max_frases=1) if resumido else formatar_em_paragrafos(texto_bruto)
         if memoria is not None:
-            ensinar(memoria, termo_limpo, resposta_final, fonte="web")
-            
+            ensinar(memoria, termo_limpo, texto_bruto, fonte="web")
         return resposta_final
 
     return f"Não encontrei uma explicação direta sobre '{termo_limpo}'."
 
-# ------------------ Motor de Criatividade Focada no Mesmo Assunto ------------------
-def gerar_reflexao_focada(assunto: str, resposta_base: str) -> str:
-    """Cria uma fala inédita baseada exclusivamente no assunto atual."""
-    frases = [f.strip() for f in re.split(r'[.!?]', resposta_base) if len(f.strip()) > 10]
-    detalhe_extra = random.choice(frases) if frases else resposta_base
-
-    templates_focados = [
-        f"\n\nPensando melhor sobre {assunto}, acho fascinante como isso funciona. Especialmente quando lembramos que {detalhe_extra.lower()}.",
-        f"\n\nRefletindo sobre {assunto}... O que você acha que é o ponto mais importante disso?",
-        f"\n\nSabe, quanto mais penso sobre {assunto}, mais percebo que é um tema cheio de detalhes. Tem algo específico sobre isso que você quer saber mais?",
-        f"\n\nÉ interessante notar sobre {assunto}: {detalhe_extra}. Isso faz bastante sentido!"
-    ]
-    
-    return random.choice(templates_focados)
-
-# ------------------ Personalidades Expandidas ------------------
+# ------------------ Personalidades e Super Combo de Emojis ------------------
 def detectar_personalidade(entrada: str) -> str:
     entrada_lower = entrada.lower()
-    
     def contem_palavras(palavras: List[str]) -> bool:
         return any(re.search(rf"\b{re.escape(p)}\b", entrada_lower) for p in palavras)
 
@@ -288,22 +259,51 @@ def detectar_personalidade(entrada: str) -> str:
     return "séria"
 
 def aplicar_personalidade(resposta: str, personality: str) -> str:
-    """Garante a inserção de um único emoji baseado na personalidade identificada."""
+    # Super listas de Emojis por tom de conversa! 🎉✨
     emojis = {
-        "carinhosa": [" 💙", " 🤗", " ✨", " 💖", " 🌸", " 🥰", " 🥺", " 💕", " 🌷"],
-        "engraçada": [" 😂", " 🤣", " 😆", " 😜", " 🤪", " 🤡", " 💀", " 🙃", " 🙈"],
-        "empolgada": [" 🚀", " 🎉", " 🔥", " 🤩", " ⚡", " 💯", " ✨", " 💥", " 🥳"],
-        "pensativa": [" 🧐", " 💭", " 💡", " 🤔", " 🧠", " 🌌", " 📚", " 🕵️‍♂️"],
-        "curiosa":   [" 🤔", " 🔍", " ❓", " 👀", " 🧐", " 🔎"],
-        "séria":     [" 👍", " 😊", " 🤝", " 📌", " ✅", " 🎯", " ⚖️"]
+        "carinhosa": [
+            " ✨💖🌸🥰✨💝💕",
+            " 💙🤗✨💕💫💖🌟",
+            " 🌸💖✨🥺💖🌷🌺",
+            " 💞✨🧸💌🌟💖🌸"
+        ],
+        "engraçada": [
+            " 😂🤣🤣🤪💀💥💥",
+            " 🤣😜🤡💥💥🤪🎉",
+            " 🤪😹💀🔥💯⚡💥",
+            " 🤡🤣😜💀🔥💥✨"
+        ],
+        "empolgada": [
+            " 🚀🔥💥⚡🤩🎉💯",
+            " ⚡🚀🔥💯🎉💥🌟",
+            " 💥💥🚀⚡🔥✨🌟",
+            " 🎯💥🚀✨⚡🔥🎉"
+        ],
+        "pensativa": [
+            " 🧐💭💡📜🔍🧠📑",
+            " 🤔💡📑⚡🧠📜🔍",
+            " 🧐🔍📜💭✨💡🧭",
+            " 🧠📑💭💡📜🔍✨"
+        ],
+        "curiosa": [
+            " 🤔🔍❓👀⚡💫🔎",
+            " 👀❓🔍💥✨🧐💫",
+            " 🧐❓👀💫💫🔍🧠",
+            " 🔎❓👀✨⚡🧐🧠"
+        ],
+        "séria": [
+            " 👍📌😊🤝✨🧠⚡",
+            " 🤝📌🧠⚡👍🎯📜",
+            " 📌👍✨😊🤝📑🎯",
+            " 🎯🧠📌👍✨🤝⚡"
+        ]
     }
-    lista_emojis = emojis.get(personality, [" 😊"])
-    return resposta + random.choice(lista_emojis)
+    
+    combo_emoji = random.choice(emojis.get(personality, [" ✨🔥😊🚀🎉"]))
+    return resposta + combo_emoji
 
-# ------------------ Geração Dinâmica de Cumprimento ------------------
 def gerar_saudacao_com_contexto(memoria: Dict) -> str:
     ultimo_assunto = obter_ultimo_assunto_historico()
-    
     if not ultimo_assunto and (memoria.get("usuario") or memoria.get("web")):
         todos_itens = memoria.get("usuario", []) + memoria.get("web", [])
         if todos_itens:
@@ -313,8 +313,7 @@ def gerar_saudacao_com_contexto(memoria: Dict) -> str:
         variacoes = [
             f"Olá! Você ainda está pensando sobre {ultimo_assunto}?",
             f"Oi! Estava lembrando da nossa conversa sobre {ultimo_assunto}. Quer continuar?",
-            f"Olá! Ficou alguma dúvida sobre {ultimo_assunto}?",
-            f"Oi de novo! Vamos conversar mais sobre {ultimo_assunto} ou prefere outro assunto?"
+            f"Olá! Ficou alguma dúvida sobre {ultimo_assunto}?"
         ]
         return random.choice(variacoes)
     
@@ -323,23 +322,13 @@ def gerar_saudacao_com_contexto(memoria: Dict) -> str:
         "Oi! Que bom te ver por aqui. Sobre o que quer conversar?"
     ])
 
-# ------------------ Execução de Busca Web com Salvamento na Memória ------------------
 def executar_busca_web(termo: str, memoria: Dict, silenciosa: bool = False) -> Dict[str, Any]:
     resultado_web = pesquisar_na_internet(termo, resumido=silenciosa, memoria=memoria)
-    
     if resultado_web == "Você está sem internet!":
-        return {
-            "resposta": "Você está sem internet!",
-            "pergunta_followup": None,
-            "assunto": termo
-        }
+        return {"resposta": "Você está sem internet!", "pergunta_followup": None, "assunto": termo}
     
     if silenciosa:
-        return {
-            "resposta": resultado_web,
-            "pergunta_followup": None,
-            "assunto": termo
-        }
+        return {"resposta": resultado_web, "pergunta_followup": None, "assunto": termo}
 
     sugestao_busca = f"Deixe-me dar uma olhada na internet sobre {termo}..."
     print(f"IA: {sugestao_busca}\n")
@@ -352,7 +341,6 @@ def executar_busca_web(termo: str, memoria: Dict, silenciosa: bool = False) -> D
         "tipo_followup": "pesquisa"
     }
 
-# ------------------ Processamento Principal ------------------
 def processar_entrada(
     memoria: Dict,
     entrada: str,
@@ -361,65 +349,62 @@ def processar_entrada(
 ) -> Dict[str, Any]:
     entrada_clean = entrada.lower().strip()
 
-    # Cumprimentos
     cumprimentos = ["oi", "olá", "ola", "oie", "e aí", "e ai", "bom dia", "boa tarde", "boa noite"]
     if entrada_clean in cumprimentos and not esperando_assunto_pesquisa:
         fala_contextual = gerar_saudacao_com_contexto(memoria)
         return {"resposta": fala_contextual, "assunto": None}
 
-    # Aguardando assunto para pesquisa
     if esperando_assunto_pesquisa:
         res = executar_busca_web(entrada, memoria)
         res["esperando_assunto"] = False
         return res
 
-    # Busca Web direta pedida pelo usuário
     gatilhos_busca = ["pesquisar sobre", "pesquise sobre", "pesquisar", "pesquise", "o que é", "o que e", "quem foi"]
     if any(entrada_clean.startswith(g) for g in gatilhos_busca):
         termo_busca = re.sub(r'^(pesquisar sobre|pesquise sobre|pesquisar|pesquise|o que é|o que e|quem foi)\s+', '', entrada, flags=re.IGNORECASE).strip()
         if termo_busca:
             return executar_busca_web(termo_busca, memoria)
 
-    # 1. Busca na Memória Local (Usuário e Web)
     item_encontrado = combiner_resposta(memoria, entrada)
     if item_encontrado:
-        resposta_base = formatar_em_paragrafos(item_encontrado["resposta"])
         assunto_atual = item_encontrado.get("assunto", entrada)
-        
-        comentario_inedito = ""
-        if random.random() < CHANCE_REFLEXAO_INEDITA:
-            comentario_inedito = gerar_reflexao_focada(assunto_atual, resposta_base)
+        texto_salvo = item_encontrado.get("resposta", "")
 
-        resposta_final = resposta_base + comentario_inedito
+        resposta_gerada = gerar_sintese_coerente(assunto_atual, texto_salvo)
         
+        complemento_web = ""
+        if tem_conexao_internet():
+            dados_web = pesquisar_na_internet(assunto_atual, resumido=True)
+            if dados_web and not dados_web.startswith("Não encontrei") and not dados_web.startswith("Você está"):
+                palavras_base = set(re.findall(r'\b\w{4,}\b', resposta_gerada.lower()))
+                palavras_web = set(re.findall(r'\b\w{4,}\b', dados_web.lower()))
+                
+                if len(palavras_base.intersection(palavras_web)) < 2:
+                    complemento_web = f" Além disso: {dados_web}"
+
+        resposta_final = f"{resposta_gerada}{complemento_web}"
         return {
-            "resposta": resposta_final,
+            "resposta": resposta_final.strip(),
             "pergunta_followup": item_encontrado.get("pergunta_followup"),
             "assunto": assunto_atual
         }
 
-    # 2. Tomada de Decisão usando CHANCE_PESQUISA_AUTOMATICA
     tem_internet = tem_conexao_internet()
-    decidir_pesquisar = tem_internet and (random.random() < CHANCE_PESQUISA_AUTOMATICA)
-
-    if decidir_pesquisar:
+    if tem_internet and (random.random() < CHANCE_PESQUISA_AUTOMATICA):
         res_silenciosa = executar_busca_web(entrada, memoria, silenciosa=True)
         if res_silenciosa["resposta"] and not res_silenciosa["resposta"].startswith("Não encontrei"):
             return res_silenciosa
 
-    # 3. Pedir para o Usuário Ensinar
     mensagem_aprendizado = random.choice([
         f"Ainda não sei sobre '{entrada}'. Me ensina ou quer que eu pesquise? (Digite o que dizer ou 'pesquisa')",
-        f"Eu não tenho isso na minha memória. Como você me ensinaria sobre '{entrada}'? (Ou digite 'pesquisa' para eu procurar)",
-        f"Fui feita para aprender com você! O que eu preciso saber sobre '{entrada}'? (Se não souber, digite 'pesquisa')"
+        f"Eu não tenho isso na minha memória. Como você me ensinaria sobre '{entrada}'? (Ou digite 'pesquisa' para eu procurar)"
     ])
-    
     print(f"IA: {mensagem_aprendizado}")
     falar(mensagem_aprendizado)
 
     nova_resposta = input("Você (ensina a IA ou digite 'pesquisa'): ").strip()
-    
     gatilhos_pedir_pesquisa = ["pesquisa", "pesquise", "não sei", "nao sei", "pesquisa você", "pesquisa voce", "procura"]
+    
     if nova_resposta.lower() in gatilhos_pedir_pesquisa:
         if tem_internet:
             return executar_busca_web(entrada, memoria, silenciosa=False)
@@ -428,20 +413,14 @@ def processar_entrada(
 
     if nova_resposta:
         ensinar(memoria, entrada, nova_resposta, fonte="usuario")
-        fala_aprendizado = f"Entendi! Aprendi e guardei na memória sobre {entrada}."
-        
-        if random.random() < CHANCE_REFLEXAO_INEDITA:
-            fala_aprendizado += gerar_reflexao_focada(entrada, nova_resposta)
-
+        fala_aprendizado = f"Entendi! Aprendi sobre '{entrada}'."
         return {"resposta": fala_aprendizado, "assunto": entrada}
     else:
         return {"resposta": "Sem problemas! Vamos conversar sobre outra coisa.", "assunto": None}
 
-# ------------------ Loop Principal ------------------
 def main() -> None:
     memoria = carregar_memoria()
     contexto: List[Dict[str, str]] = []
-    
     pos_pesquisa = False
     esperando_assunto = False
 
@@ -466,10 +445,8 @@ def main() -> None:
             
         personalidade = detectar_personalidade(entrada)
 
-        # Fluxo de verificação de continuação de pesquisa
         if pos_pesquisa and not esperando_assunto:
             pos_pesquisa = False
-            
             padrao_nao = r'\b(n[ãa]o|nop|jamais|prefiro n[ãa]o)\b'
             padrao_sim = r'\b(sim|quero|pode|bora|com certeza|s|yes)\b'
 
@@ -479,7 +456,6 @@ def main() -> None:
                 falar("Tudo bem! Sobre o que mais quer conversar?")
                 salvar_historico(entrada, resposta_ok)
                 continue
-                
             elif re.search(padrao_sim, entrada, re.IGNORECASE):
                 esperando_assunto = True
                 resposta_oq = aplicar_personalidade("O que você gostaria de pesquisar?", personalidade)
@@ -489,13 +465,11 @@ def main() -> None:
                 continue
             
             resultado = executar_busca_web(entrada, memoria)
-
         else:
             resultado = processar_entrada(memoria, entrada, contexto, esperando_assunto)
             if esperando_assunto:
                 esperando_assunto = False
 
-        # Exibição e gravação das respostas
         if isinstance(resultado, dict):
             texto_puro = resultado["resposta"]
             resposta_com_emoji = aplicar_personalidade(texto_puro, personalidade)
