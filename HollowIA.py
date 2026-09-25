@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-HollowIA - Chatbot Avançado com Aprendizado, Histórico e Personalidade Ultra Expressiva! 🚀✨🎉
+HollowIA - Chatbot Avançado com Aprendizado, Histórico e Busca Web Aprimorada! 🚀
 """
 
 import json
@@ -24,15 +24,82 @@ HISTORICO_FILE = "historico.json"
 CHANCE_REFLEXAO_INEDITA = 0.30
 CHANCE_PESQUISA_AUTOMATICA = 0.65
 
+RESPOSTAS_EMOCIONAIS = {
+    # --- Sentimentos Negativos / Tristeza / Desânimo ---
+    "triste": "Sinto muito que esteja se sentindo assim. Quer conversar sobre o que aconteceu?",
+    "tristeza": "A tristeza pode ser pesada. Estou aqui se quiser desabafar.",
+    "chateado": "Poxa, o que aconteceu para te deixar chateado?",
+    "chateada": "Poxa, o que aconteceu para te deixar chateada?",
+    "deprimido": "Sinto muito. Estou aqui se quiser desabafar ou apenas conversar um pouco.",
+    "deprimida": "Sinto muito. Estou aqui se quiser desabafar ou apenas conversar um pouco.",
+    "depressao": "Sinto muito que esteja passando por isso. Quer me contar como tem se sentido?",
+    "mal": "Espero que as coisas melhorem logo. Quer me contar o motivo?",
+    "desanimado": "Dias assim são difíceis... Quer conversar sobre o que te tirou o ânimo?",
+    "desanimada": "Dias assim são difíceis... Quer conversar sobre o que te tirou o ânimo?",
+    "sozinho": "Você não está só, estou aqui conversando com você. O que está pegando?",
+    "sozinha": "Você não está só, estou aqui conversando com você. O que está pegando?",
+
+    # --- Raiva / Irritação / Frustração ---
+    "bravo": "Eita, o que te deixou bravo assim? Quer desabafar?",
+    "brava": "Eita, o que te deixou brava assim? Quer desabafar?",
+    "irritado": "Sei como é horrível ficar irritado. Quer me contar o que aconteceu?",
+    "irritada": "Sei como é horrível ficar irritada. Quer me contar o que aconteceu?",
+    "com raiva": "Respire fundo! O que aconteceu para te deixar com tanta raiva?",
+    "frustrado": "A frustração é péssima. Quer me explicar o que deu errado?",
+    "frustrada": "A frustração é péssima. Quer me explicar o que deu errado?",
+    "puto": "Nossa, parece que a situação foi feia. O que rolou?",
+    "puta": "Nossa, parece que a situação foi feia. O que rolou?",
+
+    # --- Ansiedade / Estresse / Medo ---
+    "ansioso": "Tente respirar fundo com calma. Quer conversar sobre o que está te deixando assim?",
+    "ansiosa": "Tente respirar fundo com calma. Quer conversar sobre o que está te deixando assim?",
+    "ansiedade": "Ansiedade é bem desconfortável... Vamos focar no momento presente. Quer conversar?",
+    "estresse": "Poxa, dias estressantes são bem cansativos. O que te sobrecarregou hoje?",
+    "estressado": "Dá uma pausinha se puder. Quer desabafar sobre o motivo do estresse?",
+    "estressada": "Dá uma pausinha se puder. Quer desabafar sobre o motivo do estresse?",
+    "preocupado": "O que está deixando sua cabeça cheia de preocupações?",
+    "preocupada": "O que está deixando sua cabeça cheia de preocupações?",
+    "com medo": "É normal sentir medo às vezes. Quer me contar o que está te assustando?",
+    "nervoso": "Tenta dar uma pausa e relaxar os ombros. Quer me contar o que te deixou assim?",
+    "nervosa": "Tenta dar uma pausa e relaxar os ombros. Quer me contar o que te deixou assim?",
+
+    # --- Sentimentos Estranhos / Confusão / Neutros ---
+    "estranho": "Sentir-se estranho às vezes é difícil de explicar, né? Quer tentar me dizer como é essa sensação?",
+    "estranha": "Sentir-se estranha às vezes é difícil de explicar, né? Quer tentar me dizer como é essa sensação?",
+    "confuso": "Às vezes a nossa cabeça dá um nó mesmo. Quer organizar os pensamentos conversando comigo?",
+    "confusa": "Às vezes a nossa cabeça dá um nó mesmo. Quer organizar os pensamentos conversando comigo?",
+    "perdido": "Está tudo bem não ter todas as respostas agora. Quer trocar uma ideia sobre o que está sentindo?",
+    "perdida": "Está tudo bem não ter todas as respostas agora. Quer trocar uma ideia sobre o que está sentindo?",
+    "cansado": "Poxa, você precisa descansar um pouco. Foi um dia muito puxado?",
+    "cansada": "Poxa, você precisa descansar um pouco. Foi um dia muito puxado?",
+    "tedio": "Tédio é chato mesmo! Quer conversar sobre algum assunto legal para passar o tempo?",
+    "entediado": "Vamos espantar esse tédio! Quer falar sobre jogos, tecnologia ou algum tema bacana?",
+    "entediada": "Vamos espantar esse tédio! Quer falar sobre jogos, tecnologia ou algum tema bacana?",
+
+    # --- Sentimentos Positivos / Felicidade / Animação ---
+    "feliz": "Que notícia maravilhosa! Fico muito feliz por você! O que aconteceu de bom?",
+    "alegre": "Que ótimo! É muito bom te ver com essa energia positiva!",
+    "alegria": "Que incrível! A alegria contagia! Qual é o motivo dessa felicidade toda?",
+    "animado": "Que show! Qual é a boa nova de hoje?",
+    "animada": "Que show! Qual é a boa nova de hoje?",
+    "bem": "Que excelente que você está bem! Como posso deixar seu dia ainda melhor?",
+    "otimo": "Que maravilha! Adoro ver você animado assim!",
+    "otima": "Que maravilha! Adoro ver você animada assim!",
+    "empolgado": "Massa demais! Me conta o que te deixou tão empolgado!",
+    "empolgada": "Massa demais! Me conta o que te deixou tão empolgada!",
+    "orgulhoso": "Parabéns! É incrível sentir orgulho das próprias conquistas. Me conta o que você fez!",
+    "orgulhosa": "Parabéns! É incrível sentir orgulho das próprias conquistas. Me conta o que você fez!",
+    "em paz": "Que sensação boa! Nada como um dia tranquilo e em paz."
+}
+
 SINONIMOS = {
-    "gpu": ["placa de vídeo", "placa de video", "gpu"],
-    "placa de vídeo": ["gpu", "placa de vídeo", "placa de video"],
-    "placa de video": ["gpu", "placa de vídeo", "placa de video"],
+    "gpu": ["placa de vídeo", "placa de video", "gpu", "placa gráfica", "placas de vídeo", "placas de video"],
+    "placa de vídeo": ["gpu", "placa de vídeo", "placa de video", "placa gráfica"],
+    "placa de video": ["gpu", "placa de vídeo", "placa de video", "placa gráfica"],
+    "rtx 4090": ["rtx 4090", "geforce rtx 4090", "placa de video rtx 4090"],
     "ets2": ["euro truck simulator 2", "ets2", "euro truck"],
     "euro truck simulator 2": ["ets2", "euro truck simulator 2", "euro truck"],
-    "euro truck": ["ets2", "euro truck simulator 2", "euro truck"],
-    "triste": ["triste", "chateado", "mal", "deprimido", "tristeza"],
-    "chateado": ["triste", "chateado", "mal", "deprimido"]
+    "euro truck": ["ets2", "euro truck simulator 2", "euro truck"]
 }
 
 engine = None
@@ -67,14 +134,14 @@ def formatar_em_paragrafos(texto: str, frases_por_paragrafo: int = 2) -> str:
         paragrafos.append(paragrafo)
     return "\n\n".join(paragrafos)
 
-def resumir_texto(texto: str, max_frases: int = 1) -> str:
+def resumir_texto(texto: str, max_frases: int = 4) -> str:
     if not texto:
         return ""
     frases = [f.strip() for f in re.split(r'(?<=[.!?])\s+', texto.strip()) if len(f.strip()) > 5]
     return " ".join(frases[:max_frases])
 
 def extrair_palavra_chave(texto: str) -> str:
-    stop_words = {"eu", "estou", "me", "sinto", "muito", "o", "a", "os", "as", "de", "do", "da", "em", "um", "uma", "para", "com", "que"}
+    stop_words = {"eu", "estou", "me", "sinto", "muito", "o", "a", "os", "as", "de", "do", "da", "em", "um", "uma", "para", "com", "que", "qual", "quais"}
     palavras = re.findall(r'\b\w+\b', texto.lower())
     filtradas = [p for p in palavras if p not in stop_words]
     return filtradas[0] if filtradas else texto.lower().strip()
@@ -85,10 +152,10 @@ def gerar_sintese_coerente(assunto: str, texto_memoria: str) -> str:
     
     frases_uteis = [
         f for f in frases 
-        if not any(t in f.lower() for t in termos_irrelevantes)
+        if not any(t in f.lower() for t in termos_irrelevantes) and not f.endswith('?')
     ]
     
-    frase_escolhida = frases_uteis[0] if frases_uteis else (frases[0] if frases else f"{assunto} é um tema bastante interessante.")
+    frase_escolhida = frases_uteis[0] if frases_uteis else (frases[0] if frases and not frases[0].endswith('?') else f"{assunto} é um tema interessante.")
     
     introducoes = [
         f"Sobre {assunto}: {frase_escolhida}",
@@ -202,105 +269,91 @@ def pesquisar_na_internet(termo: str, resumido: bool = False, memoria: Optional[
     if not tem_conexao_internet():
         return "Você está sem internet!"
 
-    termo_limpo = termo.strip()
-    headers = {'User-Agent': 'HollowIA/1.0 (Educational Chatbot)'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
     texto_bruto = ""
 
+    termo_limpo = re.sub(
+        r'^(o que é|o que e|quem foi|pesquisar sobre|pesquise sobre|pesquisar|pesquise|qual|quais|onde|como)\s+', 
+        '', 
+        termo, 
+        flags=re.IGNORECASE
+    ).strip()
+
+    # 1. Wikipédia API
     url_wiki = f"https://pt.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(termo_limpo)}"
     try:
         req = urllib.request.Request(url_wiki, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=4) as response:
             dados = json.loads(response.read().decode('utf-8'))
             if "extract" in dados and dados["extract"]:
                 texto_bruto = dados["extract"]
     except Exception:
         pass
 
+    # 2. DuckDuckGo HTML
     if not texto_bruto:
-        url_ddg = f"https://api.duckduckgo.com/?q={urllib.parse.quote(termo_limpo)}&format=json&no_html=1&kl=br-pt"
+        url_ddg_html = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(termo)}"
         try:
-            req = urllib.request.Request(url_ddg, headers=headers)
+            req = urllib.request.Request(url_ddg_html, headers=headers)
             with urllib.request.urlopen(req, timeout=5) as response:
-                dados = json.loads(response.read().decode('utf-8'))
-                if dados.get("AbstractText"):
-                    texto_bruto = dados["AbstractText"]
-                elif dados.get("RelatedTopics"):
-                    for topico in dados["RelatedTopics"]:
-                        if isinstance(topico, dict) and "Text" in topico:
-                            texto_bruto = topico["Text"]
-                            break
+                html = response.read().decode('utf-8')
+                
+                raw_snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+                
+                palavras_bloqueadas = ["frete grátis", "mercado livre", "shoppee", "oferta", "comprar", "magalu", "kabum", "encontre na", "examples and translations"]
+                snippets_validos = []
+
+                for snip in raw_snippets:
+                    texto_limpo_snip = re.sub(r'<[^>]+>', '', snip).strip()
+                    if not any(p in texto_limpo_snip.lower() for p in palavras_bloqueadas):
+                        if texto_limpo_snip and not texto_limpo_snip.endswith(('.', '!', '?')):
+                            texto_limpo_snip += '.'
+                        snippets_validos.append(texto_limpo_snip)
+                
+                if snippets_validos:
+                    texto_bruto = " ".join(snippets_validos[:4])
         except Exception:
             pass
 
     if texto_bruto:
-        resposta_final = resumir_texto(texto_bruto, max_frases=1) if resumido else formatar_em_paragrafos(texto_bruto)
+        resposta_final = resumir_texto(texto_bruto, max_frases=4) if resumido else formatar_em_paragrafos(texto_bruto)
         if memoria is not None:
-            ensinar(memoria, termo_limpo, texto_bruto, fonte="web")
+            ensinar(memoria, termo_limpo if termo_limpo else termo, texto_bruto, fonte="web")
         return resposta_final
 
-    return f"Não encontrei uma explicação direta sobre '{termo_limpo}'."
+    return f"Não encontrei uma explicação direta sobre '{termo}'."
 
-# ------------------ Personalidades e Super Combo de Emojis ------------------
+# ------------------ Personalidades e Emojis Moderados ------------------
 def detectar_personalidade(entrada: str) -> str:
     entrada_lower = entrada.lower()
     def contem_palavras(palavras: List[str]) -> bool:
         return any(re.search(rf"\b{re.escape(p)}\b", entrada_lower) for p in palavras)
 
-    if contem_palavras(["triste", "chateado", "mal", "deprimido"]):
+    if contem_palavras(["triste", "chateado", "mal", "deprimido", "bravo", "ansioso"]):
         return "carinhosa"
     if contem_palavras(["piada", "haha", "kkk", "engraçado", "lol"]):
         return "engraçada"
-    if contem_palavras(["uau", "incrível", "massa", "legal", "demais"]):
+    if contem_palavras(["uau", "incrível", "massa", "legal", "demais", "feliz", "alegre"]):
         return "empolgada"
-    if contem_palavras(["por que", "porque", "como", "onde"]):
+    if contem_palavras(["por que", "porque", "como", "onde", "estranho"]):
         return "pensativa"
     if "?" in entrada:
         return "curiosa"
     return "séria"
 
 def aplicar_personalidade(resposta: str, personality: str) -> str:
-    # Super listas de Emojis por tom de conversa! 🎉✨
+    # Apenas 1 a 2 emojis equilibrados por tom
     emojis = {
-        "carinhosa": [
-            " ✨💖🌸🥰✨💝💕",
-            " 💙🤗✨💕💫💖🌟",
-            " 🌸💖✨🥺💖🌷🌺",
-            " 💞✨🧸💌🌟💖🌸"
-        ],
-        "engraçada": [
-            " 😂🤣🤣🤪💀💥💥",
-            " 🤣😜🤡💥💥🤪🎉",
-            " 🤪😹💀🔥💯⚡💥",
-            " 🤡🤣😜💀🔥💥✨"
-        ],
-        "empolgada": [
-            " 🚀🔥💥⚡🤩🎉💯",
-            " ⚡🚀🔥💯🎉💥🌟",
-            " 💥💥🚀⚡🔥✨🌟",
-            " 🎯💥🚀✨⚡🔥🎉"
-        ],
-        "pensativa": [
-            " 🧐💭💡📜🔍🧠📑",
-            " 🤔💡📑⚡🧠📜🔍",
-            " 🧐🔍📜💭✨💡🧭",
-            " 🧠📑💭💡📜🔍✨"
-        ],
-        "curiosa": [
-            " 🤔🔍❓👀⚡💫🔎",
-            " 👀❓🔍💥✨🧐💫",
-            " 🧐❓👀💫💫🔍🧠",
-            " 🔎❓👀✨⚡🧐🧠"
-        ],
-        "séria": [
-            " 👍📌😊🤝✨🧠⚡",
-            " 🤝📌🧠⚡👍🎯📜",
-            " 📌👍✨😊🤝📑🎯",
-            " 🎯🧠📌👍✨🤝⚡"
-        ]
+        "carinhosa": [" ✨💙", " 🌸", " 🤗", " 💖", " ✨🥰"],
+        "engraçada": [" 😂", " 😜", " 🤣", " 🤪"],
+        "empolgada": [" 🚀✨", " 🎉", " 🔥", " ⭐"],
+        "pensativa": [" 🧐", " 💭", " 💡"],
+        "curiosa": [" 🤔", " 👀", " 🔎"],
+        "séria": [" 👍", " ✨", " 📌", " 😊"]
     }
     
-    combo_emoji = random.choice(emojis.get(personality, [" ✨🔥😊🚀🎉"]))
-    return resposta + combo_emoji
+    emoji_escolhido = random.choice(emojis.get(personality, [" ✨"]))
+    return resposta + emoji_escolhido
 
 def gerar_saudacao_com_contexto(memoria: Dict) -> str:
     ultimo_assunto = obter_ultimo_assunto_historico()
@@ -359,42 +412,41 @@ def processar_entrada(
         res["esperando_assunto"] = False
         return res
 
-    gatilhos_busca = ["pesquisar sobre", "pesquise sobre", "pesquisar", "pesquise", "o que é", "o que e", "quem foi"]
+    # 1. Trata sentimentos e emoções (ordena do maior para o menor termo)
+    termos_emocionais_ordenados = sorted(RESPOSTAS_EMOCIONAIS.keys(), key=len, reverse=True)
+    for emocao in termos_emocionais_ordenados:
+        if re.search(rf"\b{re.escape(emocao)}\b", entrada_clean):
+            return {"resposta": RESPOSTAS_EMOCIONAIS[emocao], "assunto": emocao}
+
+    # 2. Gatilhos explícitos para buscar na web
+    gatilhos_busca = ["pesquisar sobre", "pesquise sobre", "pesquisar", "pesquise", "o que é", "o que e", "quem foi", "qual", "quais"]
     if any(entrada_clean.startswith(g) for g in gatilhos_busca):
         termo_busca = re.sub(r'^(pesquisar sobre|pesquise sobre|pesquisar|pesquise|o que é|o que e|quem foi)\s+', '', entrada, flags=re.IGNORECASE).strip()
         if termo_busca:
             return executar_busca_web(termo_busca, memoria)
 
+    # 3. Procura na memória local
     item_encontrado = combiner_resposta(memoria, entrada)
     if item_encontrado:
         assunto_atual = item_encontrado.get("assunto", entrada)
         texto_salvo = item_encontrado.get("resposta", "")
 
         resposta_gerada = gerar_sintese_coerente(assunto_atual, texto_salvo)
-        
-        complemento_web = ""
-        if tem_conexao_internet():
-            dados_web = pesquisar_na_internet(assunto_atual, resumido=True)
-            if dados_web and not dados_web.startswith("Não encontrei") and not dados_web.startswith("Você está"):
-                palavras_base = set(re.findall(r'\b\w{4,}\b', resposta_gerada.lower()))
-                palavras_web = set(re.findall(r'\b\w{4,}\b', dados_web.lower()))
-                
-                if len(palavras_base.intersection(palavras_web)) < 2:
-                    complemento_web = f" Além disso: {dados_web}"
-
-        resposta_final = f"{resposta_gerada}{complemento_web}"
         return {
-            "resposta": resposta_final.strip(),
+            "resposta": resposta_gerada.strip(),
             "pergunta_followup": item_encontrado.get("pergunta_followup"),
             "assunto": assunto_atual
         }
 
+    # 4. Busca silenciosa automática
+    palavras_entrada = entrada_clean.split()
     tem_internet = tem_conexao_internet()
-    if tem_internet and (random.random() < CHANCE_PESQUISA_AUTOMATICA):
+    if tem_internet and len(palavras_entrada) > 3 and (random.random() < CHANCE_PESQUISA_AUTOMATICA):
         res_silenciosa = executar_busca_web(entrada, memoria, silenciosa=True)
         if res_silenciosa["resposta"] and not res_silenciosa["resposta"].startswith("Não encontrei"):
             return res_silenciosa
 
+    # 5. Aprendizado interativo
     mensagem_aprendizado = random.choice([
         f"Ainda não sei sobre '{entrada}'. Me ensina ou quer que eu pesquise? (Digite o que dizer ou 'pesquisa')",
         f"Eu não tenho isso na minha memória. Como você me ensinaria sobre '{entrada}'? (Ou digite 'pesquisa' para eu procurar)"
